@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "Pocket — Wealth & Expense Tracker"
+description = "A native personal finance app with Supabase authentication and user-owned accounts, cash flow, transfers, bills, goals, investments, debts, reports, and multi-currency settings, matching the supplied Pocket references."
+version = "1.0.0"
+id = "artifacts/pocket"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 19482
+
+[services.development]
+run = "pnpm --filter @workspace/pocket run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pocket", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/pocket", "run", "serve" ]
+
+[services.env]
+PORT = "19482"
+BASE_PATH = "/"
