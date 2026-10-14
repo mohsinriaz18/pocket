@@ -6,6 +6,7 @@ import { AuthShell, OAuthButtons } from '@/components/auth';
 import { Btn, Field, Banner, Txt } from '@/components/ui';
 import { usePocket } from '@/providers/PocketProvider';
 import { passwordProblem } from '@/lib/helpers';
+import { signupErrorMessage } from '@/lib/auth-errors';
 
 export default function Signup() {
   const { signUp } = usePocket();
@@ -23,7 +24,7 @@ export default function Signup() {
     if (pp) return setErr(pp);
     if (busy) return;
     setBusy(true); setErr(null);
-    try { const r = await signUp(name.trim(), email.trim(), pw); if (r.verificationRequired) setSent(true); } catch (e) { setErr(e instanceof Error ? e.message : 'Could not create account.'); } finally { setBusy(false); }
+    try { const r = await signUp(name.trim(), email.trim(), pw); if (r.verificationRequired) setSent(true); } catch (e) { setErr(signupErrorMessage(e)); } finally { setBusy(false); }
   };
   return (
     <AuthShell subtitle="Create your account">

@@ -10,6 +10,22 @@ The initial Pocket migration was installed in the existing project on 2026-10-13
 6. Cross-currency totals only use persisted, user-owned exchange rates. Add verified rates via the SQL Editor if conversion is needed; no implicit default FX rate exists. Same-currency transfers are atomic single-ledger records. Cross-currency transfers are rejected rather than invented.
 7. Account deletion with history is blocked by foreign keys. Bills/debts with linked payments are also protected. Delete or amend linked records explicitly; never silently erase financial history.
 
+## Resend SMTP for Supabase Auth
+
+Pocket uses Supabase Auth for confirmation and password-recovery email. The mobile app must not send SMTP mail itself or contain a Resend credential.
+
+1. In Resend, add a sending domain you control and finish its DNS verification (including the SPF/DKIM records Resend provides). Use a sender address on that verified domain.
+2. In Resend, create an API key with sending permission. Keep it private; do not paste it into chat or add it to Pocket's client environment.
+3. In the Pocket Supabase project, open **Authentication → SMTP Settings**, enable custom SMTP, and enter:
+   - Host: `smtp.resend.com`
+   - Port: `465` (SSL) or `587` (STARTTLS)
+   - Username: `resend`
+   - Password: the Resend API key
+   - Sender email: an address on the verified domain
+   - Sender name: `Pocket`
+4. Keep Supabase's project-wide email sending limit within Resend's account allowance. For Resend Free (100 emails/day, 3,000/month), a conservative starting ceiling is 4 emails/hour; keep the per-address cooldown enabled. Reduce the hourly limit if other messages also use this Resend account.
+5. Save the SMTP settings and test signup and password recovery with an address you control. The app does not retry failed signup requests automatically. A throttled attempt keeps the form values and can be retried manually after the wait period.
+
 ## Data rules
 
 - User IDs come from authenticated Supabase sessions and are checked by RLS. Composite foreign keys prevent cross-user account, investment, bill, and debt associations.

@@ -131,7 +131,7 @@ export function PocketProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => { throwIf((await supabase.auth.signInWithPassword({ email: email.trim(), password })).error); };
   const signUp = async (name: string, email: string, password: string) => {
     const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() }, emailRedirectTo: Linking.createURL('/') } });
-    throwIf(error);
+    if (error) throw error;
     if (data.user?.identities?.length === 0) throw new Error('An account with this email already exists. Please Log In or reset your password.');
     return { verificationRequired: !data.session };
   };
