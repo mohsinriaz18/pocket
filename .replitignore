@@ -7,3 +7,4 @@
 **/*.keystore
 artifacts/pocket/android
 artifacts/pocket/ios
+/generated-artifacts/
