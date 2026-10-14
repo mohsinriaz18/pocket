@@ -54,7 +54,13 @@ Thumbs.db
 !.env.example
 *.pem
 *.key
+*.jks
+*.keystore
 generated-artifacts/
+
+# Native projects are generated from Expo configuration for release builds.
+/artifacts/pocket/android/
+/artifacts/pocket/ios/
 
 # Original uploads are workspace references, not distributable app assets.
 # Pocket's required images live under artifacts/pocket/assets/.

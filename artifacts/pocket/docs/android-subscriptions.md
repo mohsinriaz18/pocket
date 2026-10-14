@@ -62,7 +62,7 @@ The `default` offering is current. Do not attach a separate trial product; each 
 
 The public Android RevenueCat SDK key is configured in Replit as `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`. Configure this same **public Android SDK key**, plus Pocket's existing public Supabase configuration, in the Android build environment. Never bundle a RevenueCat secret key or Google service-account JSON.
 
-1. Build a signed Android App Bundle and upload it to **Internal testing**.
+1. [Build a signed Android App Bundle using Pocket's GitHub cloud workflow](android-cloud-build.md) and upload it to **Internal testing**.
 2. Add a Google Play license tester and internal tester, accept the testing invitation, and install Pocket **from Google Play** using that account.
 3. Sign into Pocket and confirm the localized monthly/yearly prices and eligible 7-day trial disclosure.
 4. Use a Google Play test payment method. Confirm the `premium` entitlement unlocks Pocket.

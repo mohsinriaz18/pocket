@@ -1,0 +1,134 @@
+name: Pocket Android App Bundle
+
+# Manual builds only. This workflow never submits an app to Google Play.
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: "Android version code (must be higher than any previous Play upload)"
+        required: true
+        default: "1"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pocket-android-release
+  cancel-in-progress: false
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      NODE_OPTIONS: --max-old-space-size=4096
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY: ${{ secrets.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY }}
+      POCKET_ANDROID_VERSION_CODE: ${{ inputs.version_code }}
+      SIGNING_CONFIGURED: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Require signing configuration
+        shell: bash
+        run: |
+          if [ "$SIGNING_CONFIGURED" != "true" ]; then
+            echo "::error::Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD as repository Actions secrets. See artifacts/pocket/docs/android-cloud-build.md."
+            exit 1
+          fi
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.26.1
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Set up Java
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+
+      - name: Install Android build tools
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;27.1.12297006" "cmake;3.22.1"
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check source and release helpers
+        run: |
+          pnpm run typecheck:libs
+          pnpm --filter @workspace/pocket run typecheck
+          node --test artifacts/pocket/tests/subscriptions.test.mjs artifacts/pocket/tests/android-release.test.mjs
+
+      - name: Prepare Android release configuration
+        run: node artifacts/pocket/scripts/prepare-android-release.mjs config
+
+      - name: Generate native Android project
+        run: |
+          pnpm --filter @workspace/pocket exec expo prebuild --platform android --no-install --skip-dependency-update expo,react,react-native
+          node artifacts/pocket/scripts/prepare-android-release.mjs signing-config
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d # v4
+
+      # Signing material is exposed only to this step, not npm installation.
+      - name: Sign and build Android App Bundle
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          POCKET_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/pocket-upload.jks
+        run: |
+          node artifacts/pocket/scripts/prepare-android-release.mjs keystore
+          unset ANDROID_KEYSTORE_BASE64
+          keytool -list -keystore "$POCKET_ANDROID_KEYSTORE_PATH" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" >/dev/null
+          cd artifacts/pocket/android
+          chmod +x gradlew
+          ./gradlew :app:bundleRelease --no-daemon --no-configuration-cache --max-workers=2 \
+            '-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g'
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab > "$RUNNER_TEMP/pocket-signature-check.txt"
+          if ! grep -q 'jar verified.' "$RUNNER_TEMP/pocket-signature-check.txt"; then
+            echo "::error::The output bundle was not verified as signed."
+            exit 1
+          fi
+
+      - name: Downloadable Google Play bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: pocket-android-${{ inputs.version_code }}-${{ github.run_number }}
+          path: artifacts/pocket/android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove temporary signing files
+        if: always()
+        run: rm -f "$RUNNER_TEMP/pocket-upload.jks" "$RUNNER_TEMP/pocket-signature-check.txt"
+
+      - name: Upload instructions
+        run: |
+          {
+            echo "## Pocket Android build"
+            echo "Download the artifact from this run and unzip it to get \`app-release.aab\`."
+            echo "Package: \`com.pocketwealth.app\`. Version code: \`$POCKET_ANDROID_VERSION_CODE\`."
+            echo "Upload it in Google Play Console → Test and release → Testing → Internal testing."
+            echo "This workflow did not submit or publish the app to Google Play."
+          } >> "$GITHUB_STEP_SUMMARY"
