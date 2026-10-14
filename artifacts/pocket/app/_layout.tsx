@@ -12,10 +12,11 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { PocketProvider, usePocket } from '@/providers/PocketProvider';
+import { SubscriptionProvider, useSubscription } from '@/providers/SubscriptionProvider';
 import { usePalette } from '@/constants/theme';
 import { Logo, Skeleton, Txt } from '@/components/ui';
 
@@ -23,31 +24,35 @@ import { Logo, Skeleton, Txt } from '@/components/ui';
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
-const AUTH_ROUTES = ['onboarding', 'login', 'signup', 'reset'];
-const OPEN_ROUTES = ['reset-password'];
-
 function RootLayoutNav() {
   const { session, authLoading } = usePocket();
+  const { loading, hasAccess } = useSubscription();
   const p = usePalette();
-  const segments = useSegments();
-  const router = useRouter();
-  const first = String(segments[0] ?? '');
-  const inAuth = AUTH_ROUTES.includes(first);
-
-  useEffect(() => {
-    if (authLoading || OPEN_ROUTES.includes(first)) return;
-    if (!session && !inAuth) router.replace('/onboarding');
-    else if (session && inAuth) router.replace('/');
-  }, [authLoading, session, inAuth, router, first]);
-
-  const open = OPEN_ROUTES.includes(first);
-  const blocked = authLoading || (!open && ((!session && !inAuth) || (!!session && inAuth)));
+  const blocked = authLoading || (!!session && loading);
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       <StatusBar style={p.mode === 'dark' ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg }, animation: 'slide_from_right' }}>
-        <Stack.Screen name="(tabs)" />
+        <Stack.Protected guard={!session}>
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="login" />
+          <Stack.Screen name="signup" />
+          <Stack.Screen name="reset" />
+        </Stack.Protected>
+        <Stack.Protected guard={!!session && (loading || !hasAccess)}>
+          <Stack.Screen name="subscribe" />
+        </Stack.Protected>
+        <Stack.Protected guard={!!session && !loading && hasAccess}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="activity" />
+          <Stack.Screen name="bills" />
+          <Stack.Screen name="debts" />
+          <Stack.Screen name="reports" />
+          <Stack.Screen name="settings" />
+        </Stack.Protected>
+        <Stack.Screen name="reset-password" />
+        <Stack.Screen name="+not-found" />
       </Stack>
       {blocked ? (
         <View style={[StyleSheet.absoluteFill, { backgroundColor: p.bg, alignItems: 'center', justifyContent: 'center', gap: 20 }]}>
@@ -85,11 +90,13 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <PocketProvider>
+            <SubscriptionProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
                 <RootLayoutNav />
               </KeyboardProvider>
             </GestureHandlerRootView>
+            </SubscriptionProvider>
           </PocketProvider>
         </QueryClientProvider>
       </ErrorBoundary>

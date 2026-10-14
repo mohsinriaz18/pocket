@@ -10,7 +10,9 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.pocketwealth.app"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },

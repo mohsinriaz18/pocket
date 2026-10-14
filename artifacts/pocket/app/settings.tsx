@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Screen, Card, Txt, Field, Btn, Chips, Banner, Switch2, SectionTitle } from '@/components/ui';
 import { usePocket } from '@/providers/PocketProvider';
+import { useSubscription } from '@/providers/SubscriptionProvider';
 import { scheduleReminder, sendTestNotification } from '@/lib/reminders';
 import { currencies } from '@/lib/types';
 import { isTime, passwordProblem } from '@/lib/helpers';
@@ -13,6 +14,7 @@ const fail = (e: unknown, d: string) => (e instanceof Error ? e.message : d);
 
 export default function Settings() {
   const { data, session, saveProfile, signOut, changePassword, reminderError } = usePocket();
+  const subscription = useSubscription();
   const router = useRouter();
   const prof = data.profile;
   const [name, setName] = useState<string>('');
@@ -49,6 +51,16 @@ export default function Settings() {
 
   return (
     <Screen title="Profile & settings" back>
+      <SectionTitle title="Pocket Premium" />
+      <Card style={{ gap: 12 }}>
+        <Txt v="h3">{subscription.hasAccess ? 'Premium access is active' : 'Subscription required'}</Txt>
+        <Txt v="small" muted>Manage or cancel your plan through your store account. Canceling keeps access until your paid period or trial ends.</Txt>
+        {subscription.error ? <Banner kind="warn" message={subscription.error} /> : null}
+        <Btn kind="dark" label="Manage subscription" icon="external-link" disabled={!!subscription.action}
+          loading={subscription.action === 'manage'} onPress={() => { void subscription.manage(); }} />
+        <Btn kind="ghost" label="Restore purchases" disabled={!!subscription.action}
+          loading={subscription.action === 'restore'} onPress={() => { void subscription.restore(); }} />
+      </Card>
       <SectionTitle title="Profile" />
       <Card style={{ gap: 12 }}>
         <Field label="Name" value={name} onChangeText={setName} />

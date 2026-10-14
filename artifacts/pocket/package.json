@@ -60,5 +60,8 @@
     "xlsx": "^0.18.5",
     "zod": "catalog:",
     "zod-validation-error": "^3.4.0"
+  },
+  "dependencies": {
+    "react-native-purchases": "^10.12.2"
   }
 }
