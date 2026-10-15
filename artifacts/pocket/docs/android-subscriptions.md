@@ -13,9 +13,11 @@
 - Purchase, restore, cancellation and logout controls remain outside the paid-feature gate.
 - Prices and eligible trial details come from the store through RevenueCat. The app does not invent a trial or hardcode a price.
 
-RevenueCat catalog entries exist, but **Google Play plans, offers and RevenueCat's Google Play credentials still require configuration**. Creating a RevenueCat product does not create or activate the corresponding Google Play product.
+The RevenueCat catalog, current offering and product-to-entitlement mappings have been checked. The user confirmed that the Google Play products were created, RevenueCat's service-account credentials were verified, and an Internal testing release was installed from Google Play.
 
-## 1. Create the Google Play products
+**Live billing verification is still pending.** RevenueCat currently has no recorded sandbox subscription purchase for this project. Its product API returns no indicative prices, so it cannot confirm the USD prices or seven-day trial. Check these in the Google Play purchase sheet; do not treat a configured catalog or a passing local test as proof of a successful store purchase.
+
+## 1. Check the existing Google Play products
 
 Open Pocket in Google Play Console → **Monetize with Play → Products → Subscriptions**.
 
@@ -28,13 +30,13 @@ Open Pocket in Google Play Console → **Monetize with Play → Products → Sub
 | Billing period | 1 month | 1 year |
 | United States price | USD 11.99 | USD 99.99 |
 
-For each product:
+For each existing product, verify these settings rather than creating a duplicate:
 
-1. Create the subscription using the exact product ID.
-2. Add its base plan using the exact base plan ID and billing period.
+1. Confirm the subscription uses the exact product ID.
+2. Confirm its base plan uses the exact base plan ID and billing period.
 3. Set the United States price above and choose availability/prices for other countries. Google Play can calculate local prices; review them before saving.
 4. Save and **activate** the base plan.
-5. Add an offer with ID `trial-7-days`.
+5. Check the offer with ID `trial-7-days`.
 6. Choose **New customer acquisition**, restricted to customers who have **never had any subscription in this app**. This prevents claiming a second trial by switching from monthly to yearly.
 7. Add a **Free trial** phase lasting **7 days**. Do not add a paid introductory phase.
 8. Save and **activate** the offer.
@@ -69,6 +71,10 @@ The public Android RevenueCat SDK key is configured in Replit as `EXPO_PUBLIC_RE
 5. Test purchase cancellation, pending payment, restore, signout/account switching, cancellation with access retained, and expiration returning to the paywall.
 6. Verify the financial records are unchanged after access expires and after restoring.
 
+Use a **license-testing account** and confirm the purchase sheet offers **Test card, always approves** before proceeding. Internal tester access alone does not guarantee that purchases are free. If a normal payment card or an unexpected charge appears, cancel checkout and check license-testing enrollment.
+
+For each plan, verify the trial duration and the price after the trial in the store sheet. After a successful test purchase, confirm RevenueCat records a sandbox subscription granting `premium`, and Pocket opens its dashboard without requiring another login. Check restore and accelerated expiry separately. A pending or canceled purchase must leave Pocket locked.
+
 Google Play sandbox subscriptions/trials use accelerated test durations; a test trial may end much faster than seven actual days. Expo Go preview purchases are simulated and are **not** proof of Google Play billing or trial behavior. RevenueCat Test Store does not support trial verification.
 
 No release was submitted or approved by this implementation. Check **Publishing overview** and the relevant testing/production track in Play Console for review status. Complete store listing, privacy policy, data safety, app access/reviewer instructions and any account-deletion requirements before requesting production review.
@@ -78,11 +84,11 @@ No release was submitted or approved by this implementation. Check **Publishing 
 - Android first, as requested. An iOS bundle ID, RevenueCat iOS app/key and App Store products/offers are not configured.
 - Browser preview cannot perform Google Play purchases.
 - Access is enforced in the app's navigation. This is not a new server-side subscription policy for direct Supabase API access.
-- Live store purchase/restore/trial verification remains pending the Play Console setup above.
+- Live store purchase, restore, USD pricing and trial verification remain pending the licensed Android-device checks above.
 
 ## Local checks
 
 ```sh
 pnpm --filter @workspace/pocket run typecheck
-node --test artifacts/pocket/tests/subscriptions.test.mjs
+node --test artifacts/pocket/tests/subscriptions.test.mjs artifacts/pocket/tests/android-release.test.mjs
 ```
