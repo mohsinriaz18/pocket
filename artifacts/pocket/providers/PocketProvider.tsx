@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { emptyData, type PocketData, type Entity, type Profile, type Bill, type Debt } from '@/lib/types';
 import { billPeriod } from '@/lib/finance';
 import { scheduleReminder } from '@/lib/reminders';
+import { signupOutcome } from '@/lib/signup-outcome';
 
 interface PocketContextValue {
   session: Session | null; authLoading: boolean; data: PocketData; loading: boolean; error: string | null; reminderError: string | null;
@@ -130,10 +131,8 @@ export function PocketProvider({ children }: { children: ReactNode }) {
   };
   const signIn = async (email: string, password: string) => { throwIf((await supabase.auth.signInWithPassword({ email: email.trim(), password })).error); };
   const signUp = async (name: string, email: string, password: string) => {
-    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() }, emailRedirectTo: Linking.createURL('/') } });
-    if (error) throw error;
-    if (data.user?.identities?.length === 0) throw new Error('An account with this email already exists. Please Log In or reset your password.');
-    return { verificationRequired: !data.session };
+    const result = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() }, emailRedirectTo: Linking.createURL('/') } });
+    return signupOutcome(result.data, result.error);
   };
   const signOut = async () => {
     await scheduleReminder(false, '13:00');
