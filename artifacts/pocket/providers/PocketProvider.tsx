@@ -8,6 +8,7 @@ import { emptyData, type PocketData, type Entity, type Profile, type Bill, type 
 import { billPeriod } from '@/lib/finance';
 import { scheduleReminder } from '@/lib/reminders';
 import { signupOutcome } from '@/lib/signup-outcome';
+import { verifySignupCode, resendSignupCode } from '@/lib/email-signup';
 
 interface PocketContextValue {
   session: Session | null; authLoading: boolean; data: PocketData; loading: boolean; error: string | null; reminderError: string | null;
@@ -15,7 +16,9 @@ interface PocketContextValue {
   saveProfile(patch: Partial<Profile>): Promise<void>; payBill(bill: Bill, accountId: string): Promise<void>;
   repayDebt(debt: Debt, amount: number, accountId: string, date: string): Promise<void>;
   signIn(email: string, password: string): Promise<void>;
-  signUp(name: string, email: string, password: string): Promise<{ verificationRequired: boolean }>;
+  signUp(name: string, email: string, password: string): Promise<{ verificationRequired: boolean; userId: string }>;
+  verifyEmailCode(email: string, code: string): Promise<{ userId: string }>;
+  resendEmailCode(email: string): Promise<void>;
   signOut(): Promise<void>; resetPassword(email: string): Promise<void>; changePassword(current: string, next: string): Promise<void>;
 }
 const PocketContext = createContext<PocketContextValue | null>(null);
@@ -132,8 +135,11 @@ export function PocketProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => { throwIf((await supabase.auth.signInWithPassword({ email: email.trim(), password })).error); };
   const signUp = async (name: string, email: string, password: string) => {
     const result = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() }, emailRedirectTo: Linking.createURL('/') } });
-    return signupOutcome(result.data, result.error);
+    const outcome = signupOutcome(result.data, result.error);
+    return { ...outcome, userId: result.data.user!.id };
   };
+  const verifyEmailCode = (email: string, code: string) => verifySignupCode(supabase.auth, email, code);
+  const resendEmailCode = (email: string) => resendSignupCode(supabase.auth, email);
   const signOut = async () => {
     await scheduleReminder(false, '13:00');
     throwIf((await supabase.auth.signOut()).error); client.clear();
@@ -147,6 +153,6 @@ export function PocketProvider({ children }: { children: ReactNode }) {
     }
     throwIf((await supabase.auth.updateUser({ password: next })).error);
   };
-  return <PocketContext.Provider value={{ session, authLoading, data: query.data ?? emptyData, loading: query.isLoading && !!userId, error: query.error?.message ?? null, reminderError, refresh, save, remove, saveProfile, payBill, repayDebt, signIn, signUp, signOut, resetPassword, changePassword }}>{children}</PocketContext.Provider>;
+  return <PocketContext.Provider value={{ session, authLoading, data: query.data ?? emptyData, loading: query.isLoading && !!userId, error: query.error?.message ?? null, reminderError, refresh, save, remove, saveProfile, payBill, repayDebt, signIn, signUp, verifyEmailCode, resendEmailCode, signOut, resetPassword, changePassword }}>{children}</PocketContext.Provider>;
 }
 export function usePocket() { const context = useContext(PocketContext); if (!context) throw new Error('usePocket must be inside PocketProvider'); return context; }

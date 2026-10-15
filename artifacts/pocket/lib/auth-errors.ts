@@ -36,3 +36,23 @@ export function signupErrorMessage(error: unknown): string {
 
   return message.trim() || 'Could not create your account. Please try again.';
 }
+
+export function verificationErrorMessage(error: unknown): string {
+  if (!error || typeof error !== 'object') return 'Could not verify your email. Please try again.';
+  const value = error as AuthErrorLike;
+  const message = typeof value.message === 'string' ? value.message : '';
+  const details = `${value.code ?? ''} ${message}`.toLowerCase();
+  if (/otp_expired|token_expired|expired|invalid.*token|invalid.*code/.test(details)) {
+    return 'That code is incorrect or has expired. Check the latest email, or request a new code when the timer ends.';
+  }
+  if (/over_email_send_rate_limit|email.*rate.?limit|rate.?limit.*email/.test(details)) {
+    return 'Email sending is temporarily limited. Wait before requesting another code; the hourly allowance may require a longer wait. Pocket has not resent it automatically.';
+  }
+  if (value.status === 429 || /over_request_rate_limit|too many/.test(details)) {
+    return 'Too many attempts. Wait a little before trying again. No additional email was sent automatically.';
+  }
+  if (/network|fetch|offline|connection/.test(details)) {
+    return 'Check your connection and try again. No additional email was sent automatically.';
+  }
+  return message.trim() || 'Could not verify your email. Please try again.';
+}

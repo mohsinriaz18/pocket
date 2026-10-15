@@ -65,6 +65,8 @@ export function Btn({ label, onPress, kind = 'lime', icon, loading, disabled, sm
   return (
     <Pressable
       testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled || !!loading, busy: !!loading }}
       disabled={disabled || loading}
       onPress={onPress}
       style={({ pressed }) => [

@@ -17,6 +17,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { PocketProvider, usePocket } from '@/providers/PocketProvider';
 import { SubscriptionProvider, useSubscription } from '@/providers/SubscriptionProvider';
+import { OnboardingProvider, useOnboarding } from '@/providers/OnboardingProvider';
 import { usePalette } from '@/constants/theme';
 import { Logo, Skeleton, Txt } from '@/components/ui';
 
@@ -27,8 +28,10 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   const { session, authLoading } = usePocket();
   const { loading, hasAccess } = useSubscription();
+  const onboarding = useOnboarding();
   const p = usePalette();
-  const blocked = authLoading || (!!session && loading);
+  const blocked = authLoading || onboarding.loading ||
+    (!!session && (onboarding.authTransition || (!onboarding.needsFinish && loading)));
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
@@ -40,10 +43,13 @@ function RootLayoutNav() {
           <Stack.Screen name="signup" />
           <Stack.Screen name="reset" />
         </Stack.Protected>
-        <Stack.Protected guard={!!session && (loading || !hasAccess)}>
+        <Stack.Protected guard={!!session && onboarding.needsFinish}>
+          <Stack.Screen name="complete-setup" />
+        </Stack.Protected>
+        <Stack.Protected guard={!!session && !onboarding.needsFinish && !onboarding.authTransition && (loading || !hasAccess)}>
           <Stack.Screen name="subscribe" />
         </Stack.Protected>
-        <Stack.Protected guard={!!session && !loading && hasAccess}>
+        <Stack.Protected guard={!!session && !onboarding.needsFinish && !onboarding.authTransition && !loading && hasAccess}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="activity" />
           <Stack.Screen name="bills" />
@@ -90,6 +96,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <PocketProvider>
+            <OnboardingProvider>
             <SubscriptionProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
@@ -97,6 +104,7 @@ export default function RootLayout() {
               </KeyboardProvider>
             </GestureHandlerRootView>
             </SubscriptionProvider>
+            </OnboardingProvider>
           </PocketProvider>
         </QueryClientProvider>
       </ErrorBoundary>

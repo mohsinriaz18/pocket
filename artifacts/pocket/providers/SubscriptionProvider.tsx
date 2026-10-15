@@ -5,6 +5,7 @@ import Purchases, {
 } from 'react-native-purchases';
 import { usePocket } from '@/providers/PocketProvider';
 import { hasPremium } from '@/lib/subscriptions';
+import { useOnboarding } from '@/providers/OnboardingProvider';
 
 type Action = 'purchase' | 'restore' | 'manage' | null;
 type SubscriptionState = {
@@ -36,7 +37,9 @@ const message = (e: unknown) =>
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const { session } = usePocket();
-  const userId = session?.user.id ?? null;
+  const onboarding = useOnboarding();
+  const userId = !onboarding.loading && !onboarding.needsFinish && !onboarding.authTransition
+    ? session?.user.id ?? null : null;
   const latestUser = useRef(userId);
   latestUser.current = userId;
   const readyUser = useRef<string | null>(null);

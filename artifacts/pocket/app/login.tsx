@@ -30,8 +30,9 @@ export default function Login() {
       <OAuthButtons />
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4, marginTop: 6 }}>
         <Txt v="small" muted>Don't have an account?</Txt>
-        <Pressable onPress={() => router.replace('/signup')}><Txt v="small" color="#C8F34F">Sign Up</Txt></Pressable>
+        <Pressable onPress={() => router.replace('/onboarding')} style={{ minHeight: 44, justifyContent: 'center' }}><Txt v="small" color="#C8F34F">Sign Up</Txt></Pressable>
       </View>
+      <Pressable testID="login-verify" onPress={() => router.push('/signup?verify=1')} style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}><Txt v="small" color="#C8F34F">Verify my email with a code</Txt></Pressable>
     </AuthShell>
   );
 }
