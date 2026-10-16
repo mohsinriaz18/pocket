@@ -40,7 +40,7 @@ export default function Bills() {
               <Stat icon="repeat" label="Per month" value={money(month, cur)} />
               <Stat icon="clock" label="Due in 7 days" value={money(soon, cur)} tone={soon > 0 ? p.bad : undefined} />
             </View>
-            <MissingRates list={Array.from(missing)} />
+            <MissingRates list={Array.from(missing)} error={data.exchange_rate_error} />
             <Txt v="h2" style={{ marginTop: 8 }}>All bills</Txt>
             {err ? <Banner kind="error" message={err} /> : null}
             {sorted.length === 0 ? <Empty icon="file-text" title="No bills yet" body="Add rent, utilities or subscriptions so nothing slips past." action="Add bill" onAction={openNew} /> : (

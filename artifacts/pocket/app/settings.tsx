@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Platform, Pressable } from 'react-native';
+import { View, Platform, Pressable, Linking } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Screen, Card, Txt, Field, Btn, Chips, Banner, Switch2, SectionTitle } from '@/components/ui';
@@ -13,7 +13,7 @@ type Msg = { kind: 'ok' | 'error' | 'warn'; text: string } | null;
 const fail = (e: unknown, d: string) => (e instanceof Error ? e.message : d);
 
 export default function Settings() {
-  const { data, session, saveProfile, signOut, changePassword, reminderError } = usePocket();
+  const { data, session, saveProfile, signOut, changePassword, reminderError, refresh } = usePocket();
   const subscription = useSubscription();
   const router = useRouter();
   const prof = data.profile;
@@ -43,6 +43,7 @@ export default function Settings() {
   };
   const eye = <Pressable onPress={() => setShowPw(!showPw)} hitSlop={8}><Feather name={showPw ? 'eye' : 'eye-off'} size={17} color="#667974" /></Pressable>;
   const note = (k: string) => (m[k] ? <Banner kind={m[k]!.kind} message={m[k]!.text} /> : null);
+  const ratesDate = data.exchange_rates.reduce((latest, rate) => rate.effective_date > latest ? rate.effective_date : latest, '');
 
   const toggleRemind = async (on: boolean) => {
     if (on && !isTime(time)) return flash('rem', { kind: 'error', text: 'Reminder time must be 24-hour HH:MM, for example 20:30.' });
@@ -50,7 +51,7 @@ export default function Settings() {
   };
 
   return (
-    <Screen title="Profile & settings" back>
+    <Screen title="Profile & settings" back onRefresh={refresh}>
       <SectionTitle title="Pocket Premium" />
       <Card style={{ gap: 12 }}>
         <Txt v="h3">{subscription.hasAccess ? 'Premium access is active' : 'Subscription required'}</Txt>
@@ -81,6 +82,11 @@ export default function Settings() {
         <Chips options={currencies} value={cur} onChange={(v) => { setCur(v); void run('cur', () => saveProfile({ primary_currency: v }), 'Primary currency updated.', 'Could not update currency.'); }} />
         <Txt v="label" muted>Secondary currency</Txt>
         <Chips options={currencies} value={sec} onChange={(v) => { setSec(v); void run('cur', () => saveProfile({ secondary_currency: v }), 'Secondary currency updated.', 'Could not update currency.'); }} />
+        <Txt v="small" muted>{ratesDate ? `Latest saved rates: ${ratesDate}. Rates refresh daily.` : 'Rates sync automatically when Pocket loads.'}</Txt>
+        <Pressable accessibilityRole="link" onPress={() => { void Linking.openURL('https://www.exchangerate-api.com'); }}>
+          <Txt v="small" muted>Exchange rates by ExchangeRate-API</Txt>
+        </Pressable>
+        {data.exchange_rate_error ? <Banner kind="warn" message={data.exchange_rate_error} /> : null}
         {note('cur')}
       </Card>
 

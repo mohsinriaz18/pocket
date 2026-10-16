@@ -4,8 +4,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import { supabase } from '@/lib/supabase';
-import { emptyData, type PocketData, type Entity, type Profile, type Bill, type Debt } from '@/lib/types';
+import { emptyData, currencies, type PocketData, type Entity, type Profile, type Bill, type Debt } from '@/lib/types';
 import { billPeriod } from '@/lib/finance';
+import { fetchLatestUsdRates, hasCompleteUsdRatesForDate } from '@/lib/exchange-rates';
 import { scheduleReminder } from '@/lib/reminders';
 import { signupOutcome } from '@/lib/signup-outcome';
 import { verifySignupCode, resendSignupCode } from '@/lib/email-signup';
@@ -49,6 +50,29 @@ async function fetchData(userId: string): Promise<PocketData> {
     if (table === 'profiles') result.profile = rows[index] as unknown as Profile | null;
     else Object.assign(result, { [table]: rows[index] ?? [] });
   });
+  result.exchange_rate_error = null;
+  const today = new Date().toISOString().slice(0, 10);
+  if (!hasCompleteUsdRatesForDate(result.exchange_rates, today, currencies)) {
+    try {
+      const freshRates = await fetchLatestUsdRates(userId, currencies);
+      const merged = new Map<string, (typeof freshRates)[number] | (typeof result.exchange_rates)[number]>();
+      for (const rate of result.exchange_rates) {
+        merged.set(`${rate.base_currency}:${rate.quote_currency}:${rate.effective_date}`, rate);
+      }
+      for (const rate of freshRates) {
+        merged.set(`${rate.base_currency}:${rate.quote_currency}:${rate.effective_date}`, rate);
+      }
+      result.exchange_rates = Array.from(merged.values());
+      const saved = await supabase.from('exchange_rates').upsert(freshRates, {
+        onConflict: 'user_id,base_currency,quote_currency,effective_date',
+      });
+      if (saved.error) {
+        result.exchange_rate_error = 'Latest rates loaded, but could not be saved to your account. Pull to refresh to retry.';
+      }
+    } catch {
+      result.exchange_rate_error = 'Exchange rates could not be refreshed. Saved rates are still used where available; pull to refresh to retry.';
+    }
+  }
   result.bills = result.bills.map(b => ({ ...b, paid: result.transactions.some(t => t.bill_id === b.id && t.payment_period === billPeriod(b)) }));
   return result;
 }

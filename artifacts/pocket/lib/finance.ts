@@ -13,13 +13,33 @@ export function accountBalance(account: Account, transactions: Transaction[]): n
   }, Number(account.opening_balance));
 }
 export function convert(value: number, from: string, to: string, rates: ExchangeRate[]): number | null {
-  if (from === to) return value;
+  if (!Number.isFinite(value)) return null;
+  const source = from.trim().toUpperCase();
+  const target = to.trim().toUpperCase();
+  if (source === target) return value;
   const latest = rates.slice().sort((a, b) => b.effective_date.localeCompare(a.effective_date));
-  const direct = latest.find(r => r.base_currency === from && r.quote_currency === to);
-  if (direct && Number(direct.rate) > 0) return value * Number(direct.rate);
-  const reverse = latest.find(r => r.base_currency === to && r.quote_currency === from);
-  if (reverse && Number(reverse.rate) > 0) return value / Number(reverse.rate);
-  return null;
+  const direct = latest.find(r => r.base_currency.trim().toUpperCase() === source && r.quote_currency.trim().toUpperCase() === target && Number(r.rate) > 0);
+  const reverse = latest.find(r => r.base_currency.trim().toUpperCase() === target && r.quote_currency.trim().toUpperCase() === source && Number(r.rate) > 0);
+
+  // Rates are stored against USD, so this also converts between non-USD currencies.
+  const usdRate = (currency: string) => currency === 'USD'
+    ? null
+    : latest.find(r => r.base_currency.trim().toUpperCase() === 'USD' && r.quote_currency.trim().toUpperCase() === currency && Number(r.rate) > 0) ?? null;
+  const sourceUsdRate = usdRate(source);
+  const targetUsdRate = usdRate(target);
+  const usdToSource = source === 'USD' ? 1 : Number(sourceUsdRate?.rate);
+  const usdToTarget = target === 'USD' ? 1 : Number(targetUsdRate?.rate);
+  const pivotDate = [sourceUsdRate?.effective_date, targetUsdRate?.effective_date]
+    .filter((date): date is string => Boolean(date))
+    .sort()[0];
+
+  const candidates: { date: string; value: number }[] = [];
+  if (direct) candidates.push({ date: direct.effective_date, value: value * Number(direct.rate) });
+  if (reverse) candidates.push({ date: reverse.effective_date, value: value / Number(reverse.rate) });
+  if (pivotDate && Number.isFinite(usdToSource) && usdToSource > 0 && Number.isFinite(usdToTarget) && usdToTarget > 0) {
+    candidates.push({ date: pivotDate, value: value * usdToTarget / usdToSource });
+  }
+  return candidates.reduce((best, candidate) => candidate.date > best.date ? candidate : best, candidates[0])?.value ?? null;
 }
 function ymd(d: Date): string { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 export function dateRange(period: 'Week' | 'Month' | 'Quarter' | 'Year' | 'Custom', anchor: Date, customFrom?: string, customTo?: string) {
@@ -42,7 +62,7 @@ export function summary(data: PocketData, currency: string, from: string, to: st
   const missing = new Set<string>();
   const cv = (v: Money, c: string) => {
     const converted = convert(Number(v), c, currency, data.exchange_rates);
-    if (converted === null && Number(v) !== 0) missing.add(c);
+    if (converted === null && Number(v) !== 0) missing.add(c.trim().toUpperCase());
     return converted ?? 0;
   };
   let assets = 0, liabilities = 0;
@@ -145,7 +165,10 @@ export function netWorthTrend(data: PocketData, currency: string, from: string, 
     const day = ymd(point);
     if (day > now) continue;
     let value = 0;
-    const cv = (amount: number, original: string) => convert(amount, original, currency, data.exchange_rates.filter(r => r.effective_date <= day)) ?? 0;
+    const cv = (amount: number, original: string) => {
+      const historical = convert(amount, original, currency, data.exchange_rates.filter(r => r.effective_date <= day));
+      return historical ?? convert(amount, original, currency, data.exchange_rates) ?? 0;
+    };
     for (const a of data.accounts.filter(a => a.created_at.slice(0,10) <= day)) {
       value += cv(accountBalance(a, data.transactions.filter(t => t.date<=day)),a.currency);
     }

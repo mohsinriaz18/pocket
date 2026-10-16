@@ -366,9 +366,14 @@ export function Row({ icon, title, sub, value, valueColor, onPress, onLongPress,
   return <View style={{ backgroundColor: p.card, borderRadius: 20, borderWidth: 1, borderColor: p.border, padding: 12 }}>{body}</View>;
 }
 
-export function MissingRates({ list }: { list: string[] }) {
-  if (!list || !list.length) return null;
-  return <Banner kind="warn" message={`No exchange rate for ${list.join(', ')}. That money is left out of the totals below.`} />;
+export function MissingRates({ list, error }: { list: string[]; error?: string | null }) {
+  if ((!list || !list.length) && !error) return null;
+  return (
+    <View style={{ gap: 8 }}>
+      {list?.length ? <Banner kind="warn" message={`No exchange rate for ${list.join(', ')}. That money is left out of the totals below.`} /> : null}
+      {error ? <Banner kind="warn" message={error} /> : null}
+    </View>
+  );
 }
 
 export function Switch2({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {

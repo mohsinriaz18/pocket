@@ -38,6 +38,44 @@ test('missing currency rate excluded transparently, original records unchanged',
   assert.equal(convert(100, 'USD', 'PKR', rates), 28000);
   assert.equal(convert(28000, 'PKR', 'USD', rates), 100);
 });
+test('USD pivot converts between non-USD currencies and normalizes currency codes', () => {
+  const rates = [
+    { base_currency: 'USD', quote_currency: 'PKR', rate: 280, effective_date: '2026-10-16' },
+    { base_currency: 'USD', quote_currency: 'EUR', rate: 0.9, effective_date: '2026-10-16' },
+    { base_currency: 'USD', quote_currency: 'AED', rate: 3.6725, effective_date: '2026-10-16' },
+  ];
+  assert.equal(convert(28000, 'pkr', 'EUR', rates), 90);
+  assert.equal(convert(90, 'EUR', 'PKR', rates), 28000);
+  assert.equal(convert(100, 'USD', 'AED', rates), 367.25);
+  assert.equal(convert(Number.NaN, 'USD', 'PKR', rates), null);
+});
+test('newer USD-pivot rates supersede stale direct cross-rates', () => {
+  const rates = [
+    { base_currency: 'PKR', quote_currency: 'EUR', rate: 0.2, effective_date: '2025-01-01' },
+    { base_currency: 'USD', quote_currency: 'PKR', rate: 280, effective_date: '2026-10-16' },
+    { base_currency: 'USD', quote_currency: 'EUR', rate: 0.9, effective_date: '2026-10-16' },
+  ];
+  assert.equal(convert(28000, 'PKR', 'EUR', rates), 90);
+});
+test('mixed-currency cards and cash flow totals convert without losing original amounts', () => {
+  const data = blank();
+  data.accounts = [account('usd', 100, 'USD'), account('pkr', 28000, 'PKR')];
+  data.investments = [{ invested: 28000, current_value: 30800, currency: 'PKR' }];
+  data.goals = [{ target: 56000, saved: 14000, currency: 'PKR' }];
+  data.transactions = [{ ...entry('out', 2800, 'pkr'), currency: 'PKR' }];
+  data.exchange_rates = [
+    { base_currency: 'USD', quote_currency: 'PKR', rate: 280, effective_date: '2026-10-16' },
+  ];
+  const s = summary(data, 'USD', '2026-10-01', '2026-10-31');
+  assert.equal(s.assets, 300);
+  assert.equal(s.netWorth, 300);
+  assert.equal(s.cashOut, 10);
+  assert.equal(s.invested, 100);
+  assert.equal(s.portfolio, 110);
+  assert.equal(s.goalsSaved, 50);
+  assert.deepEqual(s.missingCurrencies, []);
+  assert.equal(data.accounts[1].opening_balance, 28000);
+});
 test('category filters and exact periods derive from records', () => {
   const rows = [entry('in', 100, 'a'), entry('out', 50, 'a'), entry('transfer', 250, 'a', 'b')];
   assert.deepEqual(categoryTotals(rows, 'out', 'PKR', []), [{ category: 'Food', amount: 50 }]);

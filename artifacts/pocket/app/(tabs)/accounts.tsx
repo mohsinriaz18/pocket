@@ -38,7 +38,7 @@ export default function Accounts() {
                 <Txt v="num" color={p.onPrimary} numberOfLines={1}>{money(assets + owed, cur)}</Txt>
               </Card>
             </FadeIn>
-            <MissingRates list={Array.from(missing)} />
+            <MissingRates list={Array.from(missing)} error={data.exchange_rate_error} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Stat icon="arrow-down-left" label="Assets" value={money(assets, cur)} tone={p.good} />
               <Stat icon="arrow-up-right" label="Owed" value={money(Math.abs(owed), cur)} tone={p.bad} />

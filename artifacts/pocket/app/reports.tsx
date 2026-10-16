@@ -70,7 +70,7 @@ export default function Reports() {
       <DataState />
       {!loading && !error && v ? (
         <>
-          <MissingRates list={v.s.missingCurrencies} />
+          <MissingRates list={v.s.missingCurrencies} error={data.exchange_rate_error} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
             <Stat icon="arrow-down-left" label="Earned" value={f(v.s.cashIn)} tone={p.good} />
             <Stat icon="arrow-up-right" label="Spent" value={f(v.s.cashOut)} tone={p.bad} />

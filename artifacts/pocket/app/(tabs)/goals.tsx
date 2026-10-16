@@ -44,7 +44,7 @@ export default function Goals() {
                 </View>
               </Card>
             </FadeIn>
-            <MissingRates list={Array.from(missing)} />
+            <MissingRates list={Array.from(missing)} error={data.exchange_rate_error} />
             <Txt v="h2" style={{ marginTop: 8 }}>Your goals</Txt>
             {delErr ? <Banner kind="error" message={delErr} /> : null}
             {data.goals.length === 0 ? <Empty icon="target" title="No goals yet" body="Set a target for an emergency fund, a trip or anything you are saving for." action="New goal" onAction={openNew} /> : (

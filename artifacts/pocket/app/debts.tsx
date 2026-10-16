@@ -45,7 +45,7 @@ export default function Debts() {
                 <Txt v="small" color={p.lime}>{pct.toFixed(1)}% paid</Txt>
               </Card>
             </FadeIn>
-            <MissingRates list={Array.from(missing)} />
+            <MissingRates list={Array.from(missing)} error={data.exchange_rate_error} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Stat icon="repeat" label="Per month" value={money(monthly, cur)} />
               <Stat icon="check-circle" label="Paid so far" value={money(paid, cur)} tone={p.good} />

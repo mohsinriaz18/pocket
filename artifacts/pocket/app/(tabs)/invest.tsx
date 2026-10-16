@@ -63,7 +63,7 @@ export default function Invest() {
                 <Txt v="small" color={gain < 0 ? '#FFB4A6' : p.lime}>{gain >= 0 ? '+' : '-'}{money(Math.abs(gain), cur)} ({pct.toFixed(1)}%) since purchase</Txt>
               </Card>
             </FadeIn>
-            <MissingRates list={calc.missing} />
+            <MissingRates list={calc.missing} error={data.exchange_rate_error} />
             {calc.points.length >= 2 ? (
               <Card style={{ gap: 8 }}><Txt v="label" muted>Trend</Txt><LineChart points={calc.points} /></Card>
             ) : null}

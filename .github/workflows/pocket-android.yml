@@ -78,7 +78,7 @@ jobs:
         run: |
           pnpm run typecheck:libs
           pnpm --filter @workspace/pocket run typecheck
-          node --test artifacts/pocket/tests/subscriptions.test.mjs artifacts/pocket/tests/android-release.test.mjs
+          node --experimental-strip-types --test artifacts/pocket/tests/*.test.mjs
 
       - name: Prepare Android release configuration
         run: node artifacts/pocket/scripts/prepare-android-release.mjs config

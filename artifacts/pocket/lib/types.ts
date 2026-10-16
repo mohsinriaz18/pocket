@@ -10,8 +10,8 @@ export interface Debt extends BaseRecord { name: string; currency: string; type:
 export interface Profile { id: string; name: string; email: string; primary_currency: string; secondary_currency: string; appearance: 'light' | 'dark' | 'system'; reminder_enabled: boolean; reminder_time: string }
 export interface ExchangeRate { base_currency: string; quote_currency: string; rate: Money; effective_date: string }
 export interface Valuation { id: string; investment_id: string; user_id: string; value: Money; date: string; created_at: string }
-export interface PocketData { accounts: Account[]; transactions: Transaction[]; bills: Bill[]; goals: Goal[]; investments: Investment[]; debts: Debt[]; exchange_rates: ExchangeRate[]; investment_valuations: Valuation[]; profile: Profile | null }
-export const emptyData: PocketData = { accounts: [], transactions: [], bills: [], goals: [], investments: [], debts: [], exchange_rates: [], investment_valuations: [], profile: null };
+export interface PocketData { accounts: Account[]; transactions: Transaction[]; bills: Bill[]; goals: Goal[]; investments: Investment[]; debts: Debt[]; exchange_rates: ExchangeRate[]; exchange_rate_error?: string | null; investment_valuations: Valuation[]; profile: Profile | null }
+export const emptyData: PocketData = { accounts: [], transactions: [], bills: [], goals: [], investments: [], debts: [], exchange_rates: [], exchange_rate_error: null, investment_valuations: [], profile: null };
 export const currencies = ['PKR', 'USD', 'EUR', 'GBP', 'AED', 'SAR', 'CAD', 'AUD', 'INR'];
 export const outCategories = ['Ai subscription', 'Atm withdrawal', 'Charity', 'Debt Payment', 'Dining', 'Education', 'Entertainment', 'Family', 'Food', 'Fuel', 'Groceries', 'Health', 'Investment Purchase', 'Mobile & Internet', 'Other', 'Rent', 'Shopping', 'Transport', 'Travel', 'Utilities'];
 export const inCategories = ['Salary', 'Business', 'Loan refund', 'Investment Income', 'Gift', 'Other'];

@@ -60,7 +60,7 @@ export default function Home() {
                 </View>
               </Card>
             </FadeIn>
-            <MissingRates list={s.missingCurrencies} />
+            <MissingRates list={s.missingCurrencies} error={data.exchange_rate_error} />
             <Segmented options={['Month', 'Quarter', 'Year'] as const} value={period} onChange={setPeriod} />
             <FadeIn i={2} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
               <Stat icon="arrow-down-left" label="Cash In" value={f(s.cashIn)} tone={p.good} />
@@ -78,7 +78,7 @@ export default function Home() {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <Txt v="small" muted>{nwt[0]?.label}</Txt><Txt v="small" muted>{nwt[nwt.length - 1]?.label}</Txt>
                   </View>
-                  <Txt v="small" muted>Based on recorded opening dates, transactions and saved valuations. Unrecorded historical adjustments and missing exchange rates are not included.</Txt>
+                  <Txt v="small" muted>Based on recorded opening dates, transactions and saved valuations. Past currency conversions use saved daily rates where available, otherwise the latest saved rate.</Txt>
                 </>
               )}
             </Card>
